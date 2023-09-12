@@ -1,0 +1,52 @@
+I have included an overview and notable features of my program here.
+
+----- OVERVIEW -----
+-At a high-level, the program is split into 3 main categories:
+
+    Pcb.c -> process-related (i.e. Create, Fork, Kill, Exit, Quantum)
+    Ipc.c -> ipc-related (i.e. Send, Receive, Reply)
+    Semaphore.c -> semaphore-related (i.e. New, P(), V())
+
+There are supplementary .c files, which deal with other important things like
+keeping track of the currently running process (Running.c), and Init (Init.c).
+
+----- NOTABLE FEATURES -----
+1. Process Scheduling Algorithm
+
+The Process Scheduling Algorithm (Running_update() in Running.c) respects queue priority above all else. It searches through all the ready queues for the highest priority process, starting at priority 0.
+
+I am aware this algorithm is not ideal, as it will starve lower priority queues as long as the highest priority queue still has processes.
+
+Therefore, I tried implementing two alternate methods, both of which use a 50%/35%/15% (corresponding to prio 0/1/2) split to limit a queue's run time. 
+
+I first attempted to create an algorithm (Running_update_attempt2() in 
+Running.c) that kept track of the total commands executed under a ready queue. Each command would count as one time unit, and each ready queue would keep track of their respective time units spent. I would then divide the time units by the total time to enforce the percentages instead of random chance. However, my implementation introduced some bugs and ultimately it seemed like more trouble than it was worth compared to, say, a random choice of queue corresponding to the 50/35/15 split.
+
+So I tried to create that random algorithm (Running_update_random_version() in Running.c), but that function also introduced some weird bugs that I couldn't solve in time. All this to say: I recognize my algorithm is not ideal, and I tried my best to implement some alternatives. In the end, I couldn't get them working. Hopefully my attempts count for something!
+
+2. IPC
+I considered allowing multiple messages to be sent to one process by making each msg field a list of messages instead. But in the context of the assignment, Send was described to always block until a reply arrives, which seems to fit the description of zero capacity messaging better. (Bounded capacity was described to not block the sender unless the message buffer was full.) 
+
+When dealing with multiple messages, I then had a choice to either overwrite the current message or reject the command completely, and rejecting seemed more correct than overwriting.
+
+3. INIT
+INIT was described to be able to do anything a normal process can,
+with the exceptions that:
+    -INIT would never be blocked,
+    -and forking INIT should fail.
+Therefore, in my program, INIT is able to do just that, even if the behaviour
+could be considered a little strange sometimes (ex. a process being able to Reply to INIT, even though INIT never gets send blocked).
+
+Considering that INIT has to be able to receive messages (i.e. have a message field), it made sense to make INIT an actual instance of a Pcb, even if most of its other fields aren't really utilized.
+
+4. ARRAYS
+For the ready queues and semaphore blocked queues, I used an array to store those queues according to their index for convenient access. (i.e. Ready queue with priority 0 is stored at the 0th index of the ready_queues_array.) This made some implementations of code more convenient, ex. Queue_get(int priority).
+
+----- FINAL NOTES -----
+-There may be some vestigial remnants of attempted add-ons, features, etc., that I have not removed. Beware.
+
+-Sometimes Process INIT is referred to as INIT, other times (esp. in IPC) as Process -1. Handling the cases was very tedious due to printf %d not working with "INIT". In the end, it seemed like it was more trouble than it was worth to keep it all consistent. Sorry if there's any confusion.
+
+-Even though I tried to structure the program in a way that would be easy to follow and expand upon, the edge cases got a little messy, and my code ultimately became very disorganized.
+
+-My takeaway is that I should focus more on pseudocoding (even more than I already do) before actually starting to program. In particular, had I fully created function prototypes before starting, I feel I could have saved myself a lot of confusion.
